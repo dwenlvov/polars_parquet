@@ -87,7 +87,7 @@ output_path = 'ваш_путь/имя_папки_куда_сохранить'
 # По каким столбцам делаем партции
 columns = ['col1', 'col2'] 
 
-pp = polars_partition()
+pp = polars_partitions()
 
 # Записать партиции
 # pp.wr_partition(df, columns, output_path)
