@@ -1,7 +1,7 @@
 import polars as pl
 import os
 
-class polars_partition:
+class polars_partitions:
     def __init__(self):
         pass
         
