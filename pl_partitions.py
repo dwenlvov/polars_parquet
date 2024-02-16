@@ -80,4 +80,4 @@ class polars_partition:
         else:  # Загрузка всех паркетов
             path = '/*'.join(['/*' for _ in range(dir_parquet.width)])
             with pl.StringCache():
-                return pl.scan_parquet(f'{output_path}{path}').select(pl.col(columns)).collect()            
+                return pl.scan_parquet(f'{output_path}{path}').select(pl.col(columns))          
