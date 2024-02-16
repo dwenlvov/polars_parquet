@@ -1,4 +1,4 @@
-# polars_parquet
+# polars_partitions
 
 ## Описание ##
 Этот код не является заменой для библиотеки [Polars](https://pola.rs/).
