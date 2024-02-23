@@ -4,3 +4,6 @@
 /.DS_Store
 /__pycache__
 /code_for_test
+/dist
+/build
+/polars_partitions.egg-info

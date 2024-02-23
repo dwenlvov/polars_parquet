@@ -1,83 +1,81 @@
 import polars as pl
 import os
 
-class polars_partitions:
-    def __init__(self):
-        pass
-        
-    # Создание TOC - Table Of Contents
-    def wr_toc(self, df, columns, output_path):  
-        prqt = pl.DataFrame(df[columns].unique())
 
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-
-        prqt.write_parquet(f'{output_path}/toc.parquet')
-        print(f'{output_path}/toc.parquet - записан')
-        print(f'Создано {len(prqt)} партиций')
+class EasyPartition:
+    def __init__(self, path):
+        self.path = path
         
-    # Запись партиций или одного паркета
-    def wr_partition(self, df, columns, output_path):
+    # Create TOC - Table Of Contents
+    def write_toc(self, df:pl.DataFrame, columns:list):
+        partitions_list = pl.DataFrame(df[columns].unique())
+
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+
+        partitions_list.write_parquet(f'{self.path}/toc.parquet')
+        print(f'{self.path}/toc.parquet - done!')
+        
+    # Recording partitions or a single parcel
+    def write_data(self, df:pl.DataFrame, columns:list):
         df.write_parquet(
-            output_path,
+            self.path,
             use_pyarrow=True,
             pyarrow_options={"partition_cols": columns}
         )
-        self.wr_toc(df, columns, output_path)
+        self.write_toc(df, columns)
     
-    # Чтение и поиск в TOC
-    def rd_toc(self, output_path, filters=None, btwn=None):  
-        df_toc = pl.read_parquet(f'{output_path}/toc.parquet')
+    # Read and search TOC
+    def get_toc(self, filters:list=None, between:list=None) -> pl.DataFrame:
+        df_toc = pl.read_parquet(f'{self.path}/toc.parquet')
         
-        # Если фильтр по партициям был указан пройтись по каждому и вернуть только те значения,
-        # которые есть в TOC
+        #If a partition filter has been specified, go through each one and return only those values,
+        #that are in the TOC
         if filters is not None and bool(filters):
             for index in range(df_toc.width):  
-                clmn_nm = df_toc.columns[index]
+                column = df_toc.columns[index]
                 
-                if clmn_nm in filters:
-                    if btwn == clmn_nm:
-                        df_toc = df_toc.filter(pl.col(clmn_nm).is_between(filters[clmn_nm][0],filters[clmn_nm][1]))
+                if column in filters:
+                    if column == between:
+                        df_toc = df_toc.filter(pl.col(column).is_between(filters[column][0],filters[column][1]))
                     else:
-                        df_toc = df_toc.filter(pl.col(clmn_nm).is_in(filters[clmn_nm]))
+                        df_toc = df_toc.filter(pl.col(column).is_in(filters[column]))
         
         return df_toc
         
-    # Чтение партиций на основании toc
-    def rd_partition(self, output_path, columns='*', filters=None, btwn=None):
-        dir_parquet = self.rd_toc(output_path, filters, btwn)
-        
+    # Reading partitions based on TOC
+    def get_data(self, columns:list='*', filters:list=None, between:list=None) -> pl.LazyFrame:
+        dir_parquet = self.get_toc(filters, between)
+    
         if filters is not None and bool(filters):
             try:
-                # Оставляем столбец, который не указали в фильтре при вызове и проставляем *, 
-                # Делаем датафрейм уникальным по всем полям
-                for clmn in list(set(dir_parquet.columns) - set(list(filters.keys()))):
-                    dir_parquet = dir_parquet.with_columns(pl.lit('*').alias(clmn)).unique() 
+                # Leave out the column that you didn't specify in the filter when you called it and put '*'
+                for column in list(set(dir_parquet.columns) - set(list(filters.keys()))):
+                    dir_parquet = dir_parquet.with_columns(pl.lit('*').alias(column)).unique() 
 
-                # Проставляем каджой записи фильтр по шаблону "поле=партиция"
-                for clmn in list(filters.keys()):
-                    dir_parquet = dir_parquet.with_columns((clmn + '=' + pl.col(clmn)).alias(clmn))
+                # Put a filter on each record using the "field=partition" template
+                for column in list(filters.keys()):
+                    dir_parquet = dir_parquet.with_columns((column + '=' + pl.col(column)).alias(column))
 
-                # Объединяем все и оставляем только столбец path
+                # Merge everything and leave only the "path" column
                 dir_parquet = dir_parquet.with_columns(
                     pl.concat_str([pl.col(i) for i in dir_parquet.columns],
                                   separator='/',
                                  ).alias('path')).select(pl.col('path'))
                 
-                # Читам все партиции удовлетворяющие условиям
+                # Read all partitions satisfying the conditions
                 with pl.StringCache():
                     for index in range(dir_parquet.width):
-                        dfs = [pl.scan_parquet(f'{output_path}/{dir}/*').select(pl.col(columns))for dir in dir_parquet['path']]
+                        dfs = [pl.scan_parquet(f'{self.path}/{dir}/*').select(pl.col(columns))for dir in dir_parquet['path']]
                     return pl.concat(dfs)
                 
-            # Если в оглавлении не нашлось ничего, что подходит под условия поиска, вернуть пустой массив
             except ValueError:
                 return pl.DataFrame()
             
             except Exception:
-                raise ValueError(f'Партиции по колонке {clmn} - Не существует')
+                raise ValueError(f'Partitions by column {column} - Does not exist')
 
-        else:  # Загрузка всех паркетов
-            path = '/*'.join(['/*' for _ in range(dir_parquet.width)])
+        else:
+            path_partition = '/*'.join(['/*' for _ in range(dir_parquet.width)])
             with pl.StringCache():
-                return pl.scan_parquet(f'{output_path}{path}').select(pl.col(columns))          
+                return pl.scan_parquet(f'{self.path}{path_partition}').select(pl.col(columns))
