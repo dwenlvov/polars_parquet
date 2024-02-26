@@ -26,8 +26,12 @@ class EasyPartition:
         self.write_toc(df, columns)
     
     # Read and search TOC
-    def get_toc(self, filters:list=None, between:list=None) -> pl.DataFrame:
+    def get_toc(self, filters:list=None, between:list=None, structure:bool=False) -> pl.DataFrame:
         df_toc = pl.read_parquet(f'{self.path}/toc.parquet')
+        
+        if structure:
+            for i in range(df_toc.width):
+                print(df_toc.columns[i] if i==0 else ' '*i+'↳'+df_toc.columns[i])
         
         #If a partition filter has been specified, go through each one and return only those values,
         #that are in the TOC

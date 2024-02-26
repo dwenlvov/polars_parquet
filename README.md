@@ -16,10 +16,9 @@ This library is not a replacement for [Polars](https://pola.rs/).
 The main goal is to improve the work (write/read/filter) with partitions by creating a Table Of Contents file (hereinafter referred to as "TOC").
 
 ### Write Partition
-**polars_parquet.wr_partition(**  
+**polars_parquet.write_data(**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _df_: DataFrame,  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _columns_: array | string,  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _output_path_: str  
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _columns_: array | string  
 **)**
 
 #### Parameters
@@ -27,24 +26,22 @@ The main goal is to improve the work (write/read/filter) with partitions by crea
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Polars DataFrame  
 **columns**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Array of columns on which to create partitions  
-**output_path**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Path to save to  
 
 <details>
     <summary>Example 🤔🤔🤔</summary>
 
 ``` python
-import polars_partitions as pp
+from polars_partitions import easy as pp
 from datetime import date
 import polars as pl
 
 # Create a test dataset
 df = pl.DataFrame({'col1':[date(2024,1,1),date(2024,1,1),date(2024,1,2),date(2024,1,2),date(2024,1,2),date(2024,1,3),date(2024,1,3),date(2024,1,3)],
-              'col2':['A2','A2','A2','A2','A2','A2','B2','B2','B2','B2'],
+              'col2':['A2','A2','A2','A2','B2','B2','B2','B2'],
               'col3':[1,2,3,4,5,6,7,8]
               })
 
-path = './your_path_where_your_partitions'
+path = './your_path'
 
 # Which columns are partitioned by
 columns = ['col1', 'col2'] 
@@ -55,17 +52,15 @@ ep = pp.EasyPartition(path)
 ep.write_data(df, columns)
 
 # Output: 
-# ./your_path_where_your_partitions/toc.parquet - done! 
+# ./your_path/toc.parquet - done! 
 
 ```
 </details>
 
 ### Write TOC
-### polars_parquet.wr_toc() 
-**polars_parquet.wr_toc(**  
+**polars_parquet.write_toc(**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _df_: DataFrame on which the partitions are based,  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _columns_: array | string,  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _output_path_: str  
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _columns_: array | string  
 **)**
 
 #### Parameters
@@ -73,32 +68,32 @@ ep.write_data(df, columns)
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Dictionary, where the key is the column and the array is the values  
 **columns**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Array of columns to create partitions for  
-**output_path**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Path to save to  
 
 ### Reading TOC
-### polars_parquet.rd_toc() 
-**polars_parquet.rd_toc(**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _output_path_: DataFrame,  
+**polars_parquet.get_toc(**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _filters_: dict = None,  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _btwn_: str = None  
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _between_: str = None  
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _structure_: bool = False  
 **)**
 
 #### Parameters
-**output_path**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Path where to save.  
 **filters**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Dictionary, where the key is the column and the array is the values  
-**btwn**  
+**between**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Works in conjunction with **filters**. It takes as input the **column name** on which to apply the **between** filter. It takes the first two values from the filters(array).  
+**structure**  
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Передав значение True печатает структуру словаря, так как партиции вложены друг в друга.
 
 <details>
     <summary>Example 🤔🤔🤔</summary>
 
 ``` python
-ep.get_toc()
+ep.get_toc(structure=True)
 
 # Output: 
+col1
+ ↳col2
+
 shape: (4, 2)
 ┌────────────┬──────┐
 │ col1       ┆ col2 │
@@ -115,17 +110,13 @@ shape: (4, 2)
 </details>
 
 ### Read Partition
-### polars_parquet.rd_partition() 
-**polars_parquet.rd_partition(**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _output_path_: str,  
+**polars_parquet.get_data(**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _columns_: array | string = "*",  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _filters_: dict = None,  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _btwn_: str = None  
 **)** → LazyFrame  
 
 #### Parameters
-**output_path**  
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Path to the parquet file or to the partitions folder  
 **columns**  
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Array of columns to return  
 **filters**  
